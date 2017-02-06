@@ -566,7 +566,9 @@ class WPCampus_2017 {
 
 		// Assign speakers to schedule post.
 		if ( ! empty( $schedule_post_speakers ) ) {
-			add_post_meta( $schedule_post_id, 'conf_sch_event_speakers', $schedule_post_speakers, true );
+			foreach( $schedule_post_speakers as $speaker_id ) {
+				add_post_meta( $schedule_post_id, 'conf_sch_event_speaker', $speaker_id, false );
+			}
 		}
 	}
 
