@@ -223,15 +223,6 @@ class WPCampus_2017 {
 		// Set the schedule post ID.
 		$schedule_post_id = $entry['post_id'];
 
-		/*
-		 * !!!!!
-		 *
-		 * @TODO:
-		 *  - Do something with $session['other_categories'] = Other session categories, another category
-		 *
-		 * !!!!!
-		 */
-
 		// Hold speaker information.
 		$speaker = array();
 		$speaker2 = array();
@@ -447,6 +438,36 @@ class WPCampus_2017 {
 			wp_set_object_terms( $schedule_post_id, $session['categories'], 'session_categories', false );
 		}
 
+		// Set the "other" categories for the session.
+		if ( ! empty( $session['other_categories'] ) ) {
+
+			// Convert to array.
+			$other_categories = explode( ',', $session['other_categories'] );
+			if ( ! empty( $other_categories ) ) {
+
+				// Will hold final term IDs.
+				$other_category_ids = array();
+
+				// Add term.
+				foreach ( $other_categories as $new_term_string ) {
+
+					// Create the term.
+					$new_term = wp_insert_term( $new_term_string, 'session_categories' );
+					if ( ! is_wp_error( $new_term ) && ! empty( $new_term['term_id'] ) ) {
+
+						// Add to list to assign later.
+						$other_category_ids[] = $new_term['term_id'];
+
+					}
+				}
+
+				// Assign all new categories to session.
+				if ( ! empty( $other_category_ids ) ) {
+					wp_set_object_terms( $schedule_post_id, $other_category_ids, 'session_categories', false );
+				}
+			}
+		}
+
 		// Set the technical levels for the session.
 		if ( ! empty( $session['levels'] ) ) {
 			wp_set_object_terms( $schedule_post_id, $session['levels'], 'session_technical', false );
@@ -472,7 +493,7 @@ class WPCampus_2017 {
 			// See if a WP user exists for their email.
 			$wp_user = get_user_by( 'email', $this_speaker['email'] );
 
-			// Build the speaker name
+			// Build the speaker name.
 			$name = '';
 
 			// Build from form.
