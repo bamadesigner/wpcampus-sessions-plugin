@@ -1,8 +1,8 @@
 <?php
 /**
- * Plugin Name:       WPCampus 2017
- * Plugin URI:        https://2017.wpcampus.org
- * Description:       Holds functionality for the WPCampus 2017 website.
+ * Plugin Name:       WPCampus Sessions
+ * Plugin URI:        https://wpcampus.org
+ * Description:       Manages session and speaker functionality for WPCampus conference websites.
  * Version:           1.0.0
  * Author:            WPCampus
  * Author URI:        https://wpcampus.org
@@ -15,13 +15,13 @@ if ( ! defined( 'WPINC' ) ) {
 	die;
 }
 
-class WPCampus_2017 {
+class WPCampus_Sessions {
 
 	/**
 	 * Holds the class instance.
 	 *
 	 * @access	private
-	 * @var		WPCampus_2017
+	 * @var		WPCampus_Sessions
 	 */
 	private static $instance;
 
@@ -29,7 +29,7 @@ class WPCampus_2017 {
 	 * Returns the instance of this class.
 	 *
 	 * @access  public
-	 * @return	WPCampus_2017
+	 * @return	WPCampus_Sessions
 	 */
 	public static function instance() {
 		if ( ! isset( self::$instance ) ) {
@@ -182,7 +182,7 @@ class WPCampus_2017 {
 	}
 
 	/**
-	 * Process the WPCampus 2017 speaker application.
+	 * Process the WPCampus speaker application.
 	 */
 	public function process_speaker_application( $entry, $form ) {
 
@@ -629,17 +629,17 @@ class WPCampus_2017 {
 }
 
 /**
- * Returns the instance of our main WPCampus_2017 class.
+ * Returns the instance of our main WPCampus_Sessions class.
  *
  * Will come in handy when we need to access the
  * class to retrieve data throughout the plugin.
  *
  * @access	public
- * @return	WPCampus_2017
+ * @return	WPCampus_Sessions
  */
-function wpcampus_2017() {
-	return WPCampus_2017::instance();
+function wpcampus_sessions() {
+	return WPCampus_Sessions::instance();
 }
 
 // Let's get this show on the road
-wpcampus_2017();
+wpcampus_sessions();
