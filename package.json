@@ -1,0 +1,16 @@
+{
+	"name": "wpcampus-sessions-plugin",
+	"version": "1.0.0",
+	"description": "Manages session and speaker functionality for WPCampus conference websites.",
+	"license": "GPL-2.0+",
+	"repository": {
+		"type": "git",
+		"url": "https://github.com/wpcampus/wpcampus-sessions-plugin.git"
+	},
+	"author": "WPCampus",
+	"devDependencies": {
+		"gulp": "^3.9.0",
+		"gulp-phpcs": "^1.3.0",
+		"gulp-watch": "^4.3.5"
+	}
+}

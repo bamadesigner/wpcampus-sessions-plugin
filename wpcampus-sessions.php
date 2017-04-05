@@ -574,7 +574,7 @@ class WPCampus_Sessions {
 
 		// Assign speakers to schedule post.
 		if ( ! empty( $schedule_post_speakers ) ) {
-			foreach( $schedule_post_speakers as $speaker_id ) {
+			foreach ( $schedule_post_speakers as $speaker_id ) {
 				add_post_meta( $schedule_post_id, 'conf_sch_event_speaker', $speaker_id, false );
 			}
 		}
