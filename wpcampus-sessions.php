@@ -53,8 +53,8 @@ class WPCampus_Sessions {
 		add_filter( 'gform_pre_submission_filter', array( $this, 'populate_field_choices' ) );
 		add_filter( 'gform_admin_pre_render', array( $this, 'populate_field_choices' ) );
 
-		// Process speaker application
-		add_action( 'gform_after_submission_1', array( $this, 'process_speaker_application' ), 10, 2 );
+		// Process 2017 speaker application
+		add_action( 'gform_after_submission_1', array( $this, 'process_2017_speaker_application' ), 10, 2 );
 
 		// Register taxonomies.
 		add_action( 'init', array( $this, 'register_taxonomies' ), 0 );
@@ -182,9 +182,15 @@ class WPCampus_Sessions {
 	}
 
 	/**
-	 * Process the WPCampus speaker application.
+	 * Process the WPCampus 2017 speaker application.
 	 */
-	public function process_speaker_application( $entry, $form ) {
+	public function process_2017_speaker_application( $entry, $form ) {
+		global $blog_id;
+
+		// Only on 2017 website.
+		if ( 7 != $blog_id ) {
+			return false;
+		}
 
 		// Make sure the form is active.
 		if ( ! isset( $form['is_active'] ) || ! $form['is_active'] ) {

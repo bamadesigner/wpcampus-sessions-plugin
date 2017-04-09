@@ -1,8 +1,9 @@
+// Require all the things (that we need).
 var gulp = require('gulp');
 var phpcs = require('gulp-phpcs');
 var watch = require('gulp-watch');
 
-// Set the source for specific files.
+// Define the source paths for each file type.
 var src = {
 	php: ['**/*.php','!vendor/**','!node_modules/**']
 };
@@ -20,10 +21,10 @@ gulp.task('php',function() {
 // Test our files.
 gulp.task('test',['php']);
 
-// Watch the files.
+// I've got my eyes on you(r file changes).
 gulp.task('watch',function() {
 	gulp.watch(src.php,['php']);
 });
 
-// Our default tasks.
+// Let's get this party started.
 gulp.task('default',['test']);
