@@ -1368,7 +1368,7 @@ class WPCampus_Sessions {
 			'show_admin_column'     => true,
 			'show_in_nav_menus'     => true,
 			'show_tagcloud'         => false,
-			'meta_box_cb'           => 'post_categories_meta_box',
+			//'meta_box_cb'         => 'post_categories_meta_box',
 			'show_in_rest'          => true,
 		);
 
@@ -1376,7 +1376,6 @@ class WPCampus_Sessions {
 		register_taxonomy( 'session_technical', array( 'schedule' ), $session_technical_args );
 
 	}
-
 }
 
 /**
