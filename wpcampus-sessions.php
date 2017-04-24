@@ -15,6 +15,11 @@ if ( ! defined( 'WPINC' ) ) {
 	die;
 }
 
+// We only need you in the admin.
+if ( is_admin() ) {
+	require_once plugin_dir_path( __FILE__ ) . 'inc/wpcampus-sessions-admin.php';
+}
+
 class WPCampus_Sessions {
 
 	/**
