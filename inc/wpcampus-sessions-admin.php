@@ -107,6 +107,11 @@ class WPCampus_Sessions_Admin {
 					$post_status = '';
 				}
 
+				// Don't filter in the trash.
+				if ( 'trash' == $post_status ) {
+					break;
+				}
+
 				// Set the status meta key.
 				$status_meta_key = 'conf_sch_speaker_status';
 
@@ -186,31 +191,34 @@ class WPCampus_Sessions_Admin {
 			// "Join" to get speaker status.
 			$pieces['join'] .= " LEFT JOIN {$wpdb->postmeta} speaker_status ON speaker_status.post_id = {$wpdb->posts}.ID AND speaker_status.meta_key = 'conf_sch_speaker_status'";
 
-			// Confirmed is the default status.
-			$status = 'confirmed';
-
-			// Are we viewing a specific status?
-			if ( ! empty( $_GET['status'] ) ) {
-				$status = $_GET['status'];
-			}
-
-			// If supposed to get empty status...
-			if ( isset( $_GET['status'] ) && ! $_GET['status'] ) {
-				$status = 'none';
-			}
-
-			// Are we filtering by status?
-			if ( $status ) {
-				if ( 'none' == $status ) {
-					$pieces['where'] .= ' AND speaker_status.post_id IS NULL';
-				} else {
-					$pieces['where'] .= $wpdb->prepare( ' AND speaker_status.meta_value = %s', $status );
-				}
-			}
-
 			// Order by status.
 			$pieces['orderby'] = "IF ( 'selected' = speaker_status.meta_value, 3, IF ( 'declined' = speaker_status.meta_value, 2, IF ( 'confirmed' = speaker_status.meta_value, 1, 0 ) ) ) DESC";
 
+			// Don't filter in the trash.
+			if ( ! ( ! empty( $_REQUEST['post_status'] ) && 'trash' == $_REQUEST['post_status'] ) ) {
+
+				// Confirmed is the default status.
+				$status = 'confirmed';
+
+				// Are we viewing a specific status?
+				if ( ! empty( $_GET['status'] ) ) {
+					$status = $_GET['status'];
+				}
+
+				// If supposed to get empty status...
+				if ( isset( $_GET['status'] ) && ! $_GET['status'] ) {
+					$status = 'none';
+				}
+
+				// Are we filtering by status?
+				if ( $status ) {
+					if ( 'none' == $status ) {
+						$pieces['where'] .= ' AND speaker_status.post_id IS NULL';
+					} else {
+						$pieces['where'] .= $wpdb->prepare( ' AND speaker_status.meta_value = %s', $status );
+					}
+				}
+			}
 		}
 
 		return $pieces;
