@@ -32,6 +32,12 @@ class WPCampus_Sessions_Admin {
 	 */
 	protected function __construct() {
 
+		// Adds dropdown to filter the speaker status.
+		add_action( 'restrict_manage_posts', array( $this, 'add_speaker_status_dropdown' ), 100, 2 );
+
+		// Filter queries.
+		add_filter( 'posts_clauses', array( $this, 'filter_posts_clauses' ), 100, 2 );
+
 		// Add meta boxes.
 		add_action( 'add_meta_boxes', array( $this, 'add_meta_boxes' ), -1, 2 );
 
@@ -72,13 +78,142 @@ class WPCampus_Sessions_Admin {
 		// Print the status.
 		if ( 'confirmed' == $status ) {
 			?><span style="color:green;">Confirmed</span><?php
-		} else if ( 'declined' == $status ) {
+		} elseif ( 'declined' == $status ) {
 			?><span style="color:red;">Declined</span><?php
-		} else if ( 'selected' == $status ) {
+		} elseif ( 'selected' == $status ) {
 			?><strong>Pending</strong><?php
 		} else {
 			?><em>Not selected</em><?php
 		}
+	}
+
+	/**
+	 * Allows us to add a dropdown to filter by speaker status.
+	 *
+	 * @param   $post_type - string - The post type slug.
+	 * @param   $which - string - The location of the extra table nav markup: 'top' or 'bottom'.
+	 * @return  void
+	 */
+	public function add_speaker_status_dropdown( $post_type, $which ) {
+		global $wpdb;
+
+		switch ( $post_type ) {
+
+			case 'speakers':
+
+				// Get the post status.
+				$post_status = ! empty( $_REQUEST['post_status'] ) ? $_REQUEST['post_status'] : '';
+				if ( 'all' == $post_status ) {
+					$post_status = '';
+				}
+
+				// Set the status meta key.
+				$status_meta_key = 'conf_sch_speaker_status';
+
+				// Get the counts.
+				$confirmed_count = 0;
+				$declined_count = 0;
+				$selected_count = 0;
+
+				// Process each meta values.
+				foreach ( array( 'confirmed', 'declined', 'selected' ) as $status_meta_value ) {
+
+					// Build the query.
+					$count_query = $wpdb->prepare( "SELECT COUNT(*) FROM {$wpdb->posts} posts INNER JOIN {$wpdb->postmeta} status ON status.post_id = posts.ID AND status.meta_key = %s AND status.meta_value = %s WHERE posts.post_type = %s", $status_meta_key, $status_meta_value, $post_type );
+
+					// Add the post status.
+					if ( $post_status ) {
+						$count_query .= $wpdb->prepare( ' AND posts.post_status = %s', $post_status );
+					} else {
+						$count_query .= " AND posts.post_status IN ('publish','future','draft','pending','private')";
+					}
+
+					// Get the count.
+					${"{$status_meta_value}_count"} = $wpdb->get_var( $count_query );
+
+				}
+
+				// Build the not selected count query.
+				$not_selected_count_query = $wpdb->prepare( "SELECT COUNT(*) FROM {$wpdb->posts} posts LEFT JOIN {$wpdb->postmeta} status ON status.post_id = posts.ID AND status.meta_key = %s WHERE posts.post_type = %s AND status.post_id IS NULL", $status_meta_key, $post_type );
+
+				// Add the post status.
+				if ( $post_status ) {
+					$not_selected_count_query .= $wpdb->prepare( ' AND posts.post_status = %s', $post_status );
+				} else {
+					$not_selected_count_query .= " AND posts.post_status IN ('publish','future','draft','pending','private')";
+				}
+
+				// Get the not selected count.
+				$not_selected_count = $wpdb->get_var( $not_selected_count_query );
+
+				// Are we viewing a specific status?
+				$declined_selected = isset( $_GET['status'] ) && 'declined' == $_GET['status'];
+				$pending_selected = isset( $_GET['status'] ) && 'selected' == $_GET['status'];
+				$not_selected = isset( $_GET['status'] ) && ! $_GET['status'];
+
+				// Confirmed is the default selected.
+				$confirmed_selected = ! isset( $_GET['status'] ) || ( isset( $_GET['status'] ) && 'confirmed' == $_GET['status'] );
+
+				?>
+				<select name="status">
+					<option value="">Sort by status</option>
+					<option value="confirmed"<?php selected( $confirmed_selected ); ?>>Confirmed (<?php echo $confirmed_count; ?>)</option>
+					<option value="declined"<?php selected( $declined_selected ); ?>>Declined (<?php echo $declined_count; ?>)</option>
+					<option value="selected"<?php selected( $pending_selected ); ?>>Pending (<?php echo $selected_count; ?>)</option>
+					<option value=""<?php selected( $not_selected ); ?>>Not selected (<?php echo $not_selected_count; ?>)</option>
+				</select>
+				<?php
+
+				break;
+		}
+	}
+
+	/**
+	 * Filter the queries to "join" and order schedule information.
+	 *
+	 * @access  public
+	 * @since   1.0.0
+	 */
+	public function filter_posts_clauses( $pieces, $query ) {
+		global $wpdb;
+
+		// Get the post type.
+		$post_type = $query->get( 'post_type' );
+
+		// For speakers...
+		if ( 'speakers' == $post_type ) {
+
+			// "Join" to get speaker status.
+			$pieces['join'] .= " LEFT JOIN {$wpdb->postmeta} speaker_status ON speaker_status.post_id = {$wpdb->posts}.ID AND speaker_status.meta_key = 'conf_sch_speaker_status'";
+
+			// Confirmed is the default status.
+			$status = 'confirmed';
+
+			// Are we viewing a specific status?
+			if ( ! empty( $_GET['status'] ) ) {
+				$status = $_GET['status'];
+			}
+
+			// If supposed to get empty status...
+			if ( isset( $_GET['status'] ) && ! $_GET['status'] ) {
+				$status = 'none';
+			}
+
+			// Are we filtering by status?
+			if ( $status ) {
+				if ( 'none' == $status ) {
+					$pieces['where'] .= ' AND speaker_status.post_id IS NULL';
+				} else {
+					$pieces['where'] .= $wpdb->prepare( ' AND speaker_status.meta_value = %s', $status );
+				}
+			}
+
+			// Order by status.
+			$pieces['orderby'] = "IF ( 'selected' = speaker_status.meta_value, 3, IF ( 'declined' = speaker_status.meta_value, 2, IF ( 'confirmed' = speaker_status.meta_value, 1, 0 ) ) ) DESC";
+
+		}
+
+		return $pieces;
 	}
 
 	/**
@@ -307,7 +442,7 @@ class WPCampus_Sessions_Admin {
 		$speaker_entry_meta_key = 'gf_speaker_conf_entry_id';
 
 		// Get the entry's speaker ID.
-		foreach ( $form[ 'fields']  as $field ) {
+		foreach ( $form['fields']  as $field ) {
 
 			// Get out of here if speaker and session ID have been checked.
 			if ( isset( $speaker_id ) && isset( $session_id ) ) {
@@ -320,7 +455,7 @@ class WPCampus_Sessions_Admin {
 				if ( ! ( $speaker_id > 0 ) ) {
 					$speaker_id = null;
 				}
-			} else if ( 'session' == $field->inputName ) {
+			} elseif ( 'session' == $field->inputName ) {
 				$session_id = rgar( $entry, $field->id );
 				if ( ! ( $session_id > 0 ) ) {
 					$session_id = null;
@@ -360,7 +495,7 @@ class WPCampus_Sessions_Admin {
 		$update_session_post = array();
 
 		// Process one field at a time.
-		foreach ( $form[ 'fields'] as $field ) {
+		foreach ( $form['fields'] as $field ) {
 
 			// Don't worry about these types.
 			if ( in_array( $field->type, array( 'html', 'section' ) ) ) {
@@ -385,62 +520,62 @@ class WPCampus_Sessions_Admin {
 					update_post_meta( $speaker_id, 'conf_sch_speaker_status', $speaker_status );
 
 				}
-			} else if ( ! empty( $speaker_meta_input_fields[ $field->inputName ] ) ) {
+			} elseif ( ! empty( $speaker_meta_input_fields[ $field->inputName ] ) ) {
 
 				// Update the speaker's post meta from the input.
 				if ( ! empty( $field_value ) ) {
 					update_post_meta( $speaker_id, $speaker_meta_input_fields[ $field->inputName ], sanitize_text_field( $field_value ) );
 				}
-			} else if ( 'speaker_name' == $field->inputName ) {
+			} elseif ( 'speaker_name' == $field->inputName ) {
 
 				// Set the speaker title to be updated.
 				if ( ! empty( $field_value ) ) {
 					$update_speaker_post['post_title'] = sanitize_text_field( $field_value );
 				}
-			} else if ( 'speaker_bio' == $field->inputName ) {
+			} elseif ( 'speaker_bio' == $field->inputName ) {
 
 				// Set the speaker biography to be updated.
 				if ( ! empty( $field_value ) ) {
 					$update_speaker_post['post_content'] = $this->strip_content_tags( $field_value );
 				}
-			} else if ( 'session_title' == $field->inputName ) {
+			} elseif ( 'session_title' == $field->inputName ) {
 
 				// Set the session title to be updated.
 				if ( ! empty( $field_value ) ) {
 					$update_session_post['post_title'] = sanitize_text_field( $field_value );
 				}
-			} else if ( 'session_desc' == $field->inputName ) {
+			} elseif ( 'session_desc' == $field->inputName ) {
 
 				// Set the session description to be updated.
 				if ( ! empty( $field_value ) ) {
 					$update_session_post['post_content'] = $this->strip_content_tags( $field_value );
 				}
-			} else if ( 'Technology' == $field->adminLabel ) {
+			} elseif ( 'Technology' == $field->adminLabel ) {
 
 				// Update the speaker's technology.
 				if ( ! empty( $field_value ) ) {
 					update_post_meta( $speaker_id, 'wpc_speaker_technology', sanitize_text_field( $field_value ) );
 				}
-			} else if ( 'Video Release' == $field->adminLabel ) {
+			} elseif ( 'Video Release' == $field->adminLabel ) {
 
 				// Update the speaker's video release.
 				if ( ! empty( $field_value ) ) {
 					$allowable_tags = '<a><ul><ol><li><em><strong><b><br><br />';
 					update_post_meta( $speaker_id, 'wpc_speaker_video_release', $this->strip_content_tags( $field_value, $allowable_tags ) );
 				}
-			} else if ( 'Special Requests' == $field->adminLabel ) {
+			} elseif ( 'Special Requests' == $field->adminLabel ) {
 
 				// Update the speaker's special requests.
 				if ( ! empty( $field_value ) ) {
 					update_post_meta( $speaker_id, 'wpc_speaker_special_requests', $this->strip_content_tags( $field_value ) );
 				}
-			} else if ( 'Arrival' == $field->adminLabel ) {
+			} elseif ( 'Arrival' == $field->adminLabel ) {
 
 				// Update the speaker's arrival.
 				if ( ! empty( $field_value ) ) {
 					update_post_meta( $speaker_id, 'wpc_speaker_arrival', sanitize_text_field( $field_value ) );
 				}
-			} else if ( 'Session Unavailability' == $field->label ) {
+			} elseif ( 'Session Unavailability' == $field->label ) {
 
 				// Get all the input data and place in array.
 				$unavailability = array();
@@ -454,7 +589,7 @@ class WPCampus_Sessions_Admin {
 				if ( ! empty( $unavailability ) ) {
 					update_post_meta( $speaker_id, 'wpc_speaker_unavailability', implode( ', ', $unavailability ) );
 				}
-			} else if ( in_array( $field->inputName, array( 'session_categories', 'session_technical' ) ) ) {
+			} elseif ( in_array( $field->inputName, array( 'session_categories', 'session_technical' ) ) ) {
 
 				// Make sure we have a session ID.
 				if ( $session_id > 0 ) {
