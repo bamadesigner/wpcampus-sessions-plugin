@@ -68,6 +68,9 @@ class WPCampus_Sessions {
 		// Register taxonomies.
 		add_action( 'init', array( $this, 'register_taxonomies' ), 0 );
 
+		// Filter queries.
+		add_filter( 'posts_clauses', array( $this, 'filter_posts_clauses' ), 100, 2 );
+
 	}
 
 	/**
@@ -389,7 +392,7 @@ class WPCampus_Sessions {
 						// Get the terms.
 						$terms = get_terms( array(
 							'taxonomy'   => $field->inputName,
-							'hide_empty' => FALSE,
+							'hide_empty' => false,
 							'orderby'    => 'name',
 							'order'      => 'ASC',
 							'fields'     => 'all',
@@ -897,7 +900,7 @@ class WPCampus_Sessions {
 
 		// Build format string.
 		$format_key = get_post_meta( $session_id, 'conf_sch_event_format', true );
-		switch( $format_key ) {
+		switch ( $format_key ) {
 
 			case 'lightning':
 				$format = 'lightning talk';
@@ -1380,6 +1383,35 @@ class WPCampus_Sessions {
 		// Register the session technical taxonomy.
 		register_taxonomy( 'session_technical', array( 'schedule' ), $session_technical_args );
 
+	}
+
+	/**
+	 * Filter the queries to "join" and order schedule information.
+	 *
+	 * @access  public
+	 * @since   1.0.0
+	 */
+	public function filter_posts_clauses( $pieces, $query ) {
+		global $wpdb;
+
+		// Not in admin.
+		if ( is_admin() ) {
+			return $pieces;
+		}
+
+		// Get the post type.
+		$post_type = $query->get( 'post_type' );
+
+		// For speakers...
+		if ( 'speakers' == $post_type
+		     || ( is_array( $post_type ) && count( $post_type ) == 1 && in_array( 'speakers', $post_type ) ) ) {
+
+			// "Join" to only get confirmed speakers.
+			$pieces['join'] .= " INNER JOIN {$wpdb->postmeta} speaker_status ON speaker_status.post_id = {$wpdb->posts}.ID AND speaker_status.meta_key = 'conf_sch_speaker_status' AND speaker_status.meta_value = 'confirmed'";
+
+		}
+
+		return $pieces;
 	}
 }
 
