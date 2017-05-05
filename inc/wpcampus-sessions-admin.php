@@ -48,7 +48,7 @@ class WPCampus_Sessions_Admin {
 		add_action( 'manage_speakers_posts_custom_column', array( $this, 'populate_posts_columns' ), 10, 2 );
 
 		// Manually update session information from speaker confirmations.
-		add_action( 'admin_init', array( $this, 'update_sessions_from_speaker_confirmations' ) );
+		//add_action( 'admin_init', array( $this, 'update_sessions_from_speaker_confirmations' ) );
 
 	}
 
@@ -417,6 +417,8 @@ class WPCampus_Sessions_Admin {
 	 */
 	public function update_session_from_speaker_confirmation( $entry, $form ) {
 		global $wpdb;
+
+		return;
 
 		// Make sure GFAPI exists.
 		if ( ! class_exists( 'GFAPI' ) ) {

@@ -71,6 +71,11 @@ class WPCampus_Sessions {
 		// Filter queries.
 		add_filter( 'posts_clauses', array( $this, 'filter_posts_clauses' ), 100, 2 );
 
+		// Globally modifying the schedule plugin.
+		add_filter( 'conf_schedule_locations_cpt_args', array( $this, 'filter_conf_schedule_locations_cpt_args' ) );
+		add_filter( 'post_type_link', array( $this, 'filter_conf_schedule_permalinks' ), 10, 2 );
+		add_action( 'pre_get_posts', array( $this, 'modify_conf_schedule_query' ) );
+
 	}
 
 	/**
@@ -1412,6 +1417,75 @@ class WPCampus_Sessions {
 		}
 
 		return $pieces;
+	}
+
+	/**
+	 * Globally modifying CPT arguments
+	 * for the schedule locations.
+	 *
+	 * @since   1.0.0
+	 * @access  public
+	 * @param   $args - array - the default args.
+	 * @return  array - the filtered args.
+	 */
+	public function filter_conf_schedule_locations_cpt_args( $args ) {
+
+		// No locations archive.
+		$args['has_archive'] = false;
+		$args['rewrite'] = false;
+
+		return $args;
+	}
+
+	/**
+	 * Redirect or change permalinks for
+	 * schedule post types.
+	 *
+	 * @since   1.0.0
+	 * @access  public
+	 * @param   $post_link - string - The post's permalink.
+	 * @param   $post - WP_Post - The post in question.
+	 * @return  string - the filtered permalink
+	 */
+	public function filter_conf_schedule_permalinks( $post_link, $post ) {
+
+		/*
+		 * Redirect all locations to the schedule.
+		 *
+		 * Redirect all speakers to speakers archive.
+		 */
+		if ( 'locations' == $post->post_type ) {
+			return trailingslashit( get_bloginfo( 'url' ) ) . 'schedule/';
+		} elseif ( 'speakers' == $post->post_type ) {
+			return get_post_type_archive_link( 'speakers' );
+		}
+
+		return $post_link;
+	}
+
+	/**
+	 * Get all of the speakers
+	 * on the speakers archive.
+	 *
+	 * @since   1.0.0
+	 * @access  public
+	 * @param   $query - WP_Query - The WP_Query instance (passed by reference).
+	 * @return  void
+	 */
+	public function modify_conf_schedule_query( $query ) {
+
+		// Only for speakers.
+		if ( 'speakers' != $query->get( 'post_type' ) ) {
+			return;
+		}
+
+		// Get all of the speakers.
+		$query->set( 'posts_per_page', -1 );
+
+		// Order by title/name.
+		$query->set( 'orderby', 'title' );
+		$query->set( 'order', 'ASC' );
+
 	}
 }
 
