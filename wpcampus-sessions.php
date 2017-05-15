@@ -65,6 +65,10 @@ class WPCampus_Sessions {
 		add_filter( 'gform_get_form_filter_8', array( $this, 'filter_2017_speaker_confirmation_form' ), 100, 2 );
 		//add_action( 'gform_after_submission_8', array( $this, 'process_2017_speaker_confirmation' ), 10, 2 );
 
+		// Process 2017 speaker questionnaire.
+		//add_filter( 'gform_get_form_filter_13', array( $this, 'filter_2017_speaker_questionnaire' ), 100, 2 );
+		add_action( 'gform_after_submission_13', array( $this, 'process_2017_speaker_questionnaire' ), 10, 2 );
+
 		// Register taxonomies.
 		add_action( 'init', array( $this, 'register_taxonomies' ), 0 );
 
@@ -228,57 +232,56 @@ class WPCampus_Sessions {
 	public function filter_field_value( $value, $field, $name ) {
 		global $blog_id;
 
-		// Is 2017 speaker confirmation form?
-		$is_2017_speaker_confirm = ( 7 == $blog_id && 8 == $field->formId );
-		if ( $is_2017_speaker_confirm ) {
+		// Is 2017 speaker form?
+		$is_2017_speaker_form = ( 7 == $blog_id && in_array( $field->formId, array( 8, 13 ) ) );
+		if ( $is_2017_speaker_form ) {
 
 			// Get the speaker and session ID.
 			$speaker_id = $this->get_form_speaker_id();
 			$session_id = $this->get_form_session_id();
-			if ( $speaker_id > 0 && $session_id > 0 ) {
 
-				// Get the speaker and session post.
-				$speaker_post = $this->get_form_speaker_post( $speaker_id );
-				$session_post = $this->get_form_session_post( $session_id );
-				if ( ! empty( $speaker_post ) && ! empty( $session_post ) ) {
+			// Get the speaker and session post.
+			$speaker_post = $speaker_id > 0 ? $this->get_form_speaker_post( $speaker_id ) : null;
+			$session_post = $session_id > 0 ? $this->get_form_session_post( $session_id ) : null;
 
-					switch ( $name ) {
+			switch ( $name ) {
 
-						case 'speaker_primary':
-							return $this->get_form_session_primary_speaker( $session_id );
+				case 'speaker_primary':
+					return $session_id ? $this->get_form_session_primary_speaker( $session_id ) : null;
 
-						case 'speaker_name':
-							return $speaker_post->post_title;
+				case 'speaker_name':
+					return ! empty( $speaker_post->post_title ) ? $speaker_post->post_title : null;
 
-						case 'speaker_bio':
-							return $speaker_post->post_content;
+				case 'speaker_bio':
+					return ! empty( $speaker_post->post_content ) ? $speaker_post->post_content : null;
 
-						case 'speaker_website':
-							return get_post_meta( $speaker_id, 'conf_sch_speaker_url', true );
+				case 'speaker_email':
+					return $speaker_id ? get_post_meta( $speaker_id, 'conf_sch_speaker_email', true ) : null;
 
-						case 'speaker_company':
-							return get_post_meta( $speaker_id, 'conf_sch_speaker_company', true );
+				case 'speaker_website':
+					return $speaker_id ? get_post_meta( $speaker_id, 'conf_sch_speaker_url', true ) : null;
 
-						case 'speaker_company_website':
-							return get_post_meta( $speaker_id, 'conf_sch_speaker_company_url', true );
+				case 'speaker_company':
+					return $speaker_id ? get_post_meta( $speaker_id, 'conf_sch_speaker_company', true ) : null;
 
-						case 'speaker_position':
-							return get_post_meta( $speaker_id, 'conf_sch_speaker_position', true );
+				case 'speaker_company_website':
+					return $speaker_id ? get_post_meta( $speaker_id, 'conf_sch_speaker_company_url', true ) : null;
 
-						case 'speaker_twitter':
-							return get_post_meta( $speaker_id, 'conf_sch_speaker_twitter', true );
+				case 'speaker_position':
+					return $speaker_id ? get_post_meta( $speaker_id, 'conf_sch_speaker_position', true ) : null;
 
-						case 'speaker_linkedin':
-							return get_post_meta( $speaker_id, 'conf_sch_speaker_linkedin', true );
+				case 'speaker_twitter':
+					return $speaker_id ? get_post_meta( $speaker_id, 'conf_sch_speaker_twitter', true ) : null;
 
-						case 'session_title':
-							return ! empty( $session_post->post_title ) ? $session_post->post_title : null;
+				case 'speaker_linkedin':
+					return $speaker_id ? get_post_meta( $speaker_id, 'conf_sch_speaker_linkedin', true ) : null;
 
-						case 'session_desc':
-							return ! empty( $session_post->post_content ) ? $session_post->post_content : null;
+				case 'session_title':
+					return ! empty( $session_post->post_title ) ? $session_post->post_title : null;
 
-					}
-				}
+				case 'session_desc':
+					return ! empty( $session_post->post_content ) ? $session_post->post_content : null;
+
 			}
 
 			// We don't want this form to use the values below.
@@ -328,12 +331,12 @@ class WPCampus_Sessions {
 	public function populate_field_choices( $form ) {
 		global $blog_id;
 
-		// Is 2017 speaker confirmation form?
-		$is_2017_speaker_confirm = ( 7 == $blog_id && 8 == $form['id'] );
+		// Is 2017 speaker form?
+		$is_2017_speaker_form = ( 7 == $blog_id && in_array( $form['id'], array( 8, 13 ) ) );
 
 		// Get the speaker and session ID.
-		$speaker_id = $is_2017_speaker_confirm ? $this->get_form_speaker_id() : 0;
-		$session_id = $is_2017_speaker_confirm ? $this->get_form_session_id() : 0;
+		$speaker_id = $is_2017_speaker_form ? $this->get_form_speaker_id() : 0;
+		$session_id = $is_2017_speaker_form ? $this->get_form_session_id() : 0;
 
 		// Get the session's speakers.
 		$session_speakers = $this->get_form_session_speakers( $session_id );
@@ -932,6 +935,54 @@ class WPCampus_Sessions {
 	}
 
 	/**
+	 * Filter the output for the 2017 speaker confirmation form.
+	 *
+	 * @access  public
+	 * @since   1.0.0
+	 * @param   $form_string - string - the default form HTML.
+	 * @param   $form - array - the form array
+	 * @return  string - the filtered HTML.
+	 */
+	public function filter_2017_speaker_questionnaire( $form_string, $form ) {
+		global $blog_id;
+
+		return;
+
+		// Only on 2017 website.
+		if ( 7 != $blog_id ) {
+			return false;
+		}
+
+		// Build error message.
+		$error_message = '<div class="callout">
+			<p>Oops! It looks like we\'re missing some important information to confirm your session.</p>
+			<p>Try the link from your confirmation email again and, if the form continues to fail, please <a href="/contact/">let us know</a>.</p>
+		</div>';
+
+		// Get the speaker ID
+		$speaker_id = $this->get_form_speaker_id();
+		if ( ! $speaker_id ) {
+			return $error_message;
+		}
+
+		// Get the speaker post.
+		$speaker_post = $this->get_form_speaker_post( $speaker_id );
+		if ( ! $speaker_post ) {
+			return $error_message;
+		}
+
+		// Add message.
+		$message = '<div class="callout">
+			<p><strong>Hello ' . $speaker_post->post_title . '!</strong></p>
+			<p>Congratulations and thank you from all of us in the WPCampus community.</p>
+			<p><strong>Please review and confirm your acceptance to present as soon as you can, and no later than Wednesday, April 19.</strong></p>
+			<p>We\'re really grateful to have you present and share your knowledge and experience at WPCampus 2017. Please answer a few questions to confirm your session and help ensure a great conference.</p>
+		</div>';
+
+		return $message . $form_string;
+	}
+
+	/**
 	 * Process the WPCampus 2017 speaker confirmation.
 	 */
 	public function process_2017_speaker_confirmation( $entry, $form ) {
@@ -1342,6 +1393,99 @@ class WPCampus_Sessions {
 				add_post_meta( $schedule_post_id, 'conf_sch_event_speaker', $speaker_id, false );
 			}
 		}*/
+	}
+
+	/**
+	 * Process the WPCampus 2017 speaker questionnaire.
+	 */
+	public function process_2017_speaker_questionnaire( $entry, $form ) {
+		global $blog_id;
+
+		// Only on 2017 website.
+		if ( 7 != $blog_id ) {
+			return false;
+		}
+
+		// Make sure the form is active.
+		if ( ! isset( $form['is_active'] ) || ! $form['is_active'] ) {
+			return false;
+		}
+
+		// Set the entry ID.
+		$entry_id = $entry['id'];
+
+		// Make sure we have an entry ID.
+		if ( ! $entry_id ) {
+			return false;
+		}
+
+		// First, check to see if the entry has already been processed.
+		$entry_post = wpcampus_forms()->get_entry_post( $entry_id, 'post' );
+
+		// If this entry has already been processed, then skip.
+		if ( $entry_post && isset( $entry_post->ID ) ) {
+			return false;
+		}
+
+		// Build post information.
+		$speaker_blog_post = array(
+			'post_type'     => 'post',
+			'post_status'   => 'pending',
+		);
+
+		// Build post content.
+		$speaker_blog_content = '';
+
+		// Process one field at a time.
+		foreach ( $form['fields'] as $field ) {
+
+			// Skip certain types.
+			if ( in_array( $field->type, array( 'section' ) ) ) {
+				continue;
+			}
+
+			// Get the field value.
+			$field_value = rgar( $entry, $field->id );
+
+			// Populate blog info.
+			if ( 'speaker_name' == $field->inputName ) {
+				$speaker_blog_post['post_title'] = $field_value;
+			} elseif ( preg_match( '/Question\s([0-9]+)/i', $field->adminLabel ) ) {
+
+				// Add line breaks.
+				if ( ! empty( $speaker_blog_content ) ) {
+					$speaker_blog_content .= "\n\n";
+				}
+
+				// Add question and response.
+				$speaker_blog_content .= $field->label;
+				$speaker_blog_content .= "\n{$field_value}";
+
+			}
+		}
+
+		// Add blog content.
+		$speaker_blog_post['post_content'] = $speaker_blog_content;
+
+		// Make sure we have post info.
+		if ( empty( $speaker_blog_post ) ) {
+			return false;
+		}
+
+		// Create the pending post.
+		$blog_post_id = wp_insert_post( $speaker_blog_post );
+
+		// No point in continuing if no blog post ID.
+		if ( is_wp_error( $blog_post_id ) || ! $blog_post_id ) {
+			return false;
+		}
+
+		// Set the speakers category.
+		wp_set_object_terms( $blog_post_id, 'speakers', 'category', false );
+
+		// Store the GF entry ID for the schedule post.
+		add_post_meta( $blog_post_id, 'gf_entry_id', $entry_id, true );
+
 	}
 
 	/**
