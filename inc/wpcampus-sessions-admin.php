@@ -298,7 +298,8 @@ class WPCampus_Sessions_Admin {
 
 			// Add custom columns after title.
 			if ( 'title' == $key ) {
-				$new_columns['wpc-speaker-status'] = 'Status';
+				$new_columns['wpc-speaker-status'] = __( 'Status', 'wpcampus' );
+				$new_columns['wpc-speaker-confirmation'] = __( 'Confirmation', 'wpcampus-schedule' );
 			}
 		}
 
@@ -322,6 +323,36 @@ class WPCampus_Sessions_Admin {
 			// Print the speaker's status.
 			$this->print_speaker_status( $post_id );
 
+		} elseif ( 'wpc-speaker-confirmation' == $column ) {
+
+			// Get speaker.
+			$speaker = new Conference_Schedule_Speaker( $post_id );
+
+			// Get speaker's events.
+			$events = $speaker->get_events();
+			if ( $events ) {
+
+				// Get speaker confirmation ID.
+				$speaker_confirmation_id = wpcampus_sessions()->get_speaker_confirmation_id( $post_id );
+
+				// If no confirmation ID, create one.
+				if ( ! $speaker_confirmation_id ) {
+					$speaker_confirmation_id = wpcampus_sessions()->create_speaker_confirmation_id( $post_id );
+				}
+
+				foreach ( $events as $event ) :
+
+					// Build confirmation URL.
+					$confirmation_url = add_query_arg( array(
+						'speaker' => $post_id,
+						'session' => $event->ID,
+						'c'       => $speaker_confirmation_id,
+					), get_bloginfo( 'url' ) . '/speaker-confirmation/' );
+
+					?><a href="<?php echo $confirmation_url; ?>" target="_blank"><?php _e( 'Confirmation form', 'conf-schedule' ); ?></a><br /><?php
+
+				endforeach;
+			}
 		}
 	}
 
