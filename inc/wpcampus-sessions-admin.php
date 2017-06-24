@@ -66,7 +66,6 @@ class WPCampus_Sessions_Admin {
 	 * Print the speaker's status.
 	 *
 	 * @access  public
-	 * @since   1.0.0
 	 * @param   $post_id - int - the speaker ID.
 	 * @return  void
 	 */
@@ -175,9 +174,6 @@ class WPCampus_Sessions_Admin {
 
 	/**
 	 * Filter the queries to "join" and order schedule information.
-	 *
-	 * @access  public
-	 * @since   1.0.0
 	 */
 	public function filter_posts_clauses( $pieces, $query ) {
 		global $wpdb;
@@ -228,7 +224,6 @@ class WPCampus_Sessions_Admin {
 	 * Adds our admin meta boxes.
 	 *
 	 * @access  public
-	 * @since   1.0.0
 	 * @param   $post_type - string - the post type
 	 * @param   $post - WP_Post - the post object
 	 * @return  void
@@ -257,7 +252,6 @@ class WPCampus_Sessions_Admin {
 	 * Prints the content in our admin meta boxes.
 	 *
 	 * @access  public
-	 * @since   1.0.0
 	 * @param   $post - WP_Post - the post object
 	 * @param   $metabox - array - meta box arguments
 	 * @return  void
@@ -276,7 +270,6 @@ class WPCampus_Sessions_Admin {
 	 * Add custom admin columns.
 	 *
 	 * @access  public
-	 * @since   1.0.0
 	 * @param   $columns - array - An array of column names.
 	 * @param   $post_type - string - The post type slug.
 	 * @return  array - the filtered column names.
@@ -310,7 +303,6 @@ class WPCampus_Sessions_Admin {
 	 * Populate our custom admin columns.
 	 *
 	 * @access  public
-	 * @since   1.0.0
 	 * @param   $column - string - The name of the column to display.
 	 * @param   $post_id - int - The current post ID.
 	 * @return  void
@@ -360,7 +352,6 @@ class WPCampus_Sessions_Admin {
 	 * Print the WPCampus speaker information.
 	 *
 	 * @access  public
-	 * @since   1.0.0
 	 * @param   int - $post_id - the ID of the event
 	 * @return  void
 	 */
@@ -375,7 +366,7 @@ class WPCampus_Sessions_Admin {
 		$special_requests = get_post_meta( $post_id, 'wpc_speaker_special_requests', true );
 
 		?>
-		<p><strong>Status:</strong><br /><?php
+		<p><strong><?php _e( 'Status:', 'wpcampus' ); ?></strong><br /><?php
 
 			// Print the speaker's status.
 			$this->print_speaker_status( $post_id );

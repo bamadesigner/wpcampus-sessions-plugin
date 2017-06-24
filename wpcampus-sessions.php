@@ -76,9 +76,16 @@ class WPCampus_Sessions {
 		add_filter( 'posts_clauses', array( $this, 'filter_posts_clauses' ), 100, 2 );
 
 		// Globally modifying the schedule plugin.
+		add_filter( 'conf_sch_feedback_url', array( $this, 'filter_conf_sch_feedback_url' ), 100, 2 );
 		add_filter( 'conf_schedule_locations_cpt_args', array( $this, 'filter_conf_schedule_locations_cpt_args' ) );
 		add_filter( 'post_type_link', array( $this, 'filter_conf_schedule_permalinks' ), 10, 2 );
 		add_action( 'pre_get_posts', array( $this, 'modify_conf_schedule_query' ) );
+
+		// Populate the session survey form.
+		add_filter( 'gform_pre_render_9', array( $this, 'populate_session_survey_form' ) );
+		add_filter( 'gform_pre_validation_9', array( $this, 'populate_session_survey_form' ) );
+		add_filter( 'gform_admin_pre_render_9', array( $this, 'populate_session_survey_form' ) );
+		add_filter( 'gform_pre_submission_filter_9', array( $this, 'populate_session_survey_form' ) );
 
 	}
 
@@ -890,7 +897,6 @@ class WPCampus_Sessions {
 	 * Filter the output for the 2017 speaker confirmation form.
 	 *
 	 * @access  public
-	 * @since   1.0.0
 	 * @param   $form_string - string - the default form HTML.
 	 * @param   $form - array - the form array
 	 * @return  string - the filtered HTML.
@@ -961,7 +967,6 @@ class WPCampus_Sessions {
 	 * Filter the output for the 2017 speaker confirmation form.
 	 *
 	 * @access  public
-	 * @since   1.0.0
 	 * @param   $form_string - string - the default form HTML.
 	 * @param   $form - array - the form array
 	 * @return  string - the filtered HTML.
@@ -1513,9 +1518,6 @@ class WPCampus_Sessions {
 
 	/**
 	 * Registers our plugins's taxonomies.
-	 *
-	 * @access  public
-	 * @since   1.0.0
 	 */
 	public function register_taxonomies() {
 
@@ -1559,9 +1561,6 @@ class WPCampus_Sessions {
 
 	/**
 	 * Filter the queries to "join" and order schedule information.
-	 *
-	 * @access  public
-	 * @since   1.0.0
 	 */
 	public function filter_posts_clauses( $pieces, $query ) {
 		global $wpdb;
@@ -1590,7 +1589,6 @@ class WPCampus_Sessions {
 	 * Globally modifying CPT arguments
 	 * for the schedule locations.
 	 *
-	 * @since   1.0.0
 	 * @access  public
 	 * @param   $args - array - the default args.
 	 * @return  array - the filtered args.
@@ -1608,7 +1606,6 @@ class WPCampus_Sessions {
 	 * Redirect or change permalinks for
 	 * schedule post types.
 	 *
-	 * @since   1.0.0
 	 * @access  public
 	 * @param   $post_link - string - The post's permalink.
 	 * @param   $post - WP_Post - The post in question.
@@ -1634,7 +1631,6 @@ class WPCampus_Sessions {
 	 * Get all of the speakers
 	 * on the speakers archive.
 	 *
-	 * @since   1.0.0
 	 * @access  public
 	 * @param   $query - WP_Query - The WP_Query instance (passed by reference).
 	 * @return  void
@@ -1653,6 +1649,105 @@ class WPCampus_Sessions {
 		$query->set( 'orderby', 'title' );
 		$query->set( 'order', 'ASC' );
 
+	}
+
+	/**
+	 * Filter the feedback URL.
+	 *
+	 * @access  public
+	 * @param   $feedback_url - string - the default feedback URL.
+	 * @param   $post - array - the post information.
+	 * @return  string - the filtered feedback URL.
+	 */
+	public function filter_conf_sch_feedback_url( $feedback_url, $post ) {
+
+		// If a session, define the URL.
+		$event_types = wp_get_object_terms( $post['id'], 'event_types', array( 'fields' => 'slugs' ) );
+		if ( ! empty( $event_types ) && in_array( 'session', $event_types ) ) {
+			return add_query_arg( array( 'session' => $post['id'] ), get_bloginfo( 'url' ) . '/session-survey/' );
+		}
+
+		return $feedback_url;
+	}
+
+	/**
+	 * Populate the session survey form.
+	 *
+	 * @access  public
+	 * @param   $form - array - the form information.
+	 * @return  array - the filtered form.
+	 */
+	public function populate_session_survey_form( $form ) {
+
+		// Get the post.
+		$session_id = ! empty( $_GET['session'] ) ? $_GET['session'] : '';
+		if ( ! $session_id ) {
+			return $form;
+		}
+
+		// Get session information.
+		$session_post = get_post( $session_id );
+		if ( ! $session_post ) {
+			return $form;
+		}
+
+		// Loop through the fields.
+		foreach ( $form['fields'] as &$field ) {
+
+			switch ( $field->inputName ) {
+
+				case 'sessiontitle':
+
+					// Get the title.
+					$session_title = get_the_title( $session_id );
+					if ( ! empty( $session_title ) ) {
+
+						// Set title.
+						$field->defaultValue = $session_title;
+
+						// Add CSS class so read only.
+						$field->cssClass .= ' gf-read-only';
+
+					}
+
+					break;
+
+				case 'speakername':
+
+					$event_speaker_ids = get_post_meta( $session_id, 'conf_sch_event_speaker', false );
+					if ( ! empty( $event_speaker_ids ) ) {
+
+						// Get speakers info.
+						$speakers = array();
+						foreach ( $event_speaker_ids as $speaker_id ) {
+							$speakers[] = get_the_title( $speaker_id );
+						}
+
+						// If we have speakers...
+						if ( ! empty( $speakers ) ) {
+
+							// Set speakers.
+							$field->defaultValue = implode( ', ', $speakers );
+
+							// Add CSS class so read only.
+							$field->cssClass .= ' gf-read-only';
+
+						}
+					}
+
+					break;
+			}
+		}
+
+		?>
+		<script type="text/javascript">
+			jQuery(document).ready(function(){
+				jQuery('li.gf-read-only input').attr('readonly','readonly');
+			});
+		</script>
+		<?php
+
+		return $form;
 	}
 }
 
