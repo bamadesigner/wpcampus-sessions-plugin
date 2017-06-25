@@ -1656,15 +1656,15 @@ class WPCampus_Sessions {
 	 *
 	 * @access  public
 	 * @param   $feedback_url - string - the default feedback URL.
-	 * @param   $post - array - the post information.
+	 * @param   $post - object - the post information.
 	 * @return  string - the filtered feedback URL.
 	 */
 	public function filter_conf_sch_feedback_url( $feedback_url, $post ) {
 
 		// If a session, define the URL.
-		$event_types = wp_get_object_terms( $post['id'], 'event_types', array( 'fields' => 'slugs' ) );
+		$event_types = wp_get_object_terms( $post->ID, 'event_types', array( 'fields' => 'slugs' ) );
 		if ( ! empty( $event_types ) && in_array( 'session', $event_types ) ) {
-			return add_query_arg( array( 'session' => $post['id'] ), get_bloginfo( 'url' ) . '/session-survey/' );
+			return add_query_arg( array( 'session' => $post->ID ), get_bloginfo( 'url' ) . '/session-survey/' );
 		}
 
 		return $feedback_url;
