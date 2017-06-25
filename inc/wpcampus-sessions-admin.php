@@ -696,6 +696,93 @@ class WPCampus_Sessions_Admin {
 
 		return trim( $string );
 	}
+
+	/**
+	 * Creates CSV of speakers information.
+	 */
+	public function create_speakers_csv() {
+
+		// Get the speakers.
+		$speakers = get_posts( array(
+			'posts_per_page'    => -1,
+			'orderby'           => 'title',
+			'order'             => 'ASC',
+			'post_type'         => 'speakers',
+			'post_status'       => 'publish',
+			'suppress_filters'  => false,
+		));
+
+		// Create array for CSV.
+		$speakers_csv = array();
+
+		foreach( $speakers as $speaker ) {
+
+			// Will hold feedback URL(s).
+			$session_titles = array();
+			$feedback_urls = array();
+
+			// Get the speaker.
+			$the_speaker = class_exists( 'Conference_Schedule_Speaker' ) ? new Conference_Schedule_Speaker( $speaker->ID ) : null;
+			if ( $the_speaker ) {
+
+				// Get speaker events.
+				$speaker_events = $the_speaker->get_events();
+				if ( ! empty( $speaker_events ) ) {
+
+					foreach( $speaker_events as $event ) {
+
+						// Add the title.
+						$session_titles[] = $event->post_title;
+
+						// Get the feedback URL.
+						$feedback_url = get_post_meta( $event->ID, 'conf_sch_event_feedback_url', true );
+
+						// Filter the feedback URL.
+						$feedback_url = apply_filters( 'conf_sch_feedback_url', $feedback_url, $event );
+
+						if ( ! empty( $feedback_url ) ) {
+							$feedback_urls[] = $feedback_url;
+						}
+					}
+				}
+			}
+
+			$speakers_csv[] = array(
+				$speaker->post_title,
+				implode( ', ', $session_titles ),
+				$speaker->post_content,
+				implode( ', ', $feedback_urls ),
+			);
+		}
+
+		// Create temporary CSV file for the complete photo list.
+		$csv_speakers_filename = 'wpcampus-2017-speakers.csv';
+		$csv_speakers_file_path = "/tmp/{$csv_speakers_filename}";
+		$csv_speakers_file = fopen( $csv_speakers_file_path, 'w' );
+
+		// Add headers.
+		fputcsv( $csv_speakers_file, array( 'Name', 'Session', 'Intro', 'Feedback' ) );
+
+		// Write image info to the file.
+		foreach ( $speakers_csv as $speaker ) {
+			fputcsv( $csv_speakers_file, $speaker );
+		}
+
+		// Close the file.
+		fclose( $csv_speakers_file );
+
+		// Output headers so that the file is downloaded rather than displayed.
+		header( 'Content-type: text/csv' );
+		header( "Content-disposition: attachment; filename = {$csv_speakers_filename}" );
+		header( 'Content-Length: ' . filesize( $csv_speakers_file_path ) );
+		header( 'Pragma: no-cache' );
+		header( 'Expires: 0' );
+
+		// Read the file.
+		readfile( $csv_speakers_file_path );
+
+		exit;
+	}
 }
 
 /**
