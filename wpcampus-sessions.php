@@ -87,6 +87,10 @@ class WPCampus_Sessions {
 		add_filter( 'gform_admin_pre_render_9', array( $this, 'populate_session_survey_form' ) );
 		add_filter( 'gform_pre_submission_filter_9', array( $this, 'populate_session_survey_form' ) );
 
+		// Add rewrite rules.
+		add_action( 'init', array( $this, 'add_rewrite_rules' ) );
+		add_action( 'init', array( $this, 'add_rewrite_tags' ) );
+
 	}
 
 	/**
@@ -1664,7 +1668,7 @@ class WPCampus_Sessions {
 		// If a session, define the URL.
 		$event_types = wp_get_object_terms( $post->ID, 'event_types', array( 'fields' => 'slugs' ) );
 		if ( ! empty( $event_types ) && in_array( 'session', $event_types ) ) {
-			return add_query_arg( array( 'session' => $post->ID ), get_bloginfo( 'url' ) . '/session-survey/' );
+			return get_bloginfo( 'url' ) . '/session-survey/' . $post->ID . '/';
 		}
 
 		return $feedback_url;
@@ -1680,7 +1684,7 @@ class WPCampus_Sessions {
 	public function populate_session_survey_form( $form ) {
 
 		// Get the post.
-		$session_id = ! empty( $_GET['session'] ) ? $_GET['session'] : '';
+		$session_id = get_query_var( 'session' );
 		if ( ! $session_id ) {
 			return $form;
 		}
@@ -1748,6 +1752,30 @@ class WPCampus_Sessions {
 		<?php
 
 		return $form;
+	}
+
+	/**
+	 * Add rewrite rules.
+	 *
+	 * @access  public
+	 */
+	public function add_rewrite_rules() {
+
+		// For session surveys.
+		add_rewrite_rule( '^session\-survey\/([0-9]+)\/?', 'index.php?pagename=session-survey&session=$matches[1]', 'top');
+
+	}
+
+	/**
+	 * Add rewrite tags.
+	 *
+	 * @access  public
+	 */
+	public function add_rewrite_tags() {
+
+		// Will hold session ID.
+		add_rewrite_tag( '%session%', '([0-9]+)' );
+
 	}
 }
 
