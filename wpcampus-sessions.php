@@ -76,7 +76,6 @@ class WPCampus_Sessions {
 		add_filter( 'posts_clauses', array( $this, 'filter_posts_clauses' ), 100, 2 );
 
 		// Globally modifying the schedule plugin.
-		add_filter( 'conf_sch_feedback_url', array( $this, 'filter_conf_sch_feedback_url' ), 100, 2 );
 		add_filter( 'conf_schedule_locations_cpt_args', array( $this, 'filter_conf_schedule_locations_cpt_args' ) );
 		add_filter( 'post_type_link', array( $this, 'filter_conf_schedule_permalinks' ), 10, 2 );
 		add_action( 'pre_get_posts', array( $this, 'modify_conf_schedule_query' ) );
@@ -90,6 +89,10 @@ class WPCampus_Sessions {
 		// Add rewrite rules.
 		add_action( 'init', array( $this, 'add_rewrite_rules' ) );
 		add_action( 'init', array( $this, 'add_rewrite_tags' ) );
+
+		// Set the livestream and feedback URLs.
+		add_filter( 'conf_sch_livestream_url', array( $this, 'filter_conf_sch_livestream_url' ), 100, 2 );
+		add_filter( 'conf_sch_feedback_url', array( $this, 'filter_conf_sch_feedback_url' ), 100, 2 );
 
 	}
 
@@ -1656,25 +1659,6 @@ class WPCampus_Sessions {
 	}
 
 	/**
-	 * Filter the feedback URL.
-	 *
-	 * @access  public
-	 * @param   $feedback_url - string - the default feedback URL.
-	 * @param   $post - object - the post information.
-	 * @return  string - the filtered feedback URL.
-	 */
-	public function filter_conf_sch_feedback_url( $feedback_url, $post ) {
-
-		// If a session, define the URL.
-		$event_types = wp_get_object_terms( $post->ID, 'event_types', array( 'fields' => 'slugs' ) );
-		if ( ! empty( $event_types ) && in_array( 'session', $event_types ) ) {
-			return get_bloginfo( 'url' ) . '/session-survey/' . $post->ID . '/';
-		}
-
-		return $feedback_url;
-	}
-
-	/**
 	 * Populate the session survey form.
 	 *
 	 * @access  public
@@ -1776,6 +1760,80 @@ class WPCampus_Sessions {
 		// Will hold session ID.
 		add_rewrite_tag( '%session%', '([0-9]+)' );
 
+	}
+
+	/**
+	 * Filter the livestream URL.
+	 *
+	 * @access  public
+	 * @param   $livestream_url - string - the default livestream URL.
+	 * @param   $post - object - the post information.
+	 * @return  string - the filtered livestream URL.
+	 */
+	public function filter_conf_sch_livestream_url( $livestream_url, $post ) {
+
+		// Get the date.
+		$event_date = get_post_meta( $post->ID, 'conf_sch_event_date', true );
+		if ( ! $event_date || ! strtotime( $event_date ) ) {
+			return $livestream_url;
+		}
+
+		// Convert.
+		$event_date = new DateTime( $event_date );
+		$event_date_string = $event_date->format( 'Y-m-d' );
+
+		// Get the day.
+		$event_day = '';
+		if ( '2017-07-14' == $event_date_string ) {
+			$event_day = 'fri';
+		} else if ( '2017-07-15' == $event_date_string ) {
+			$event_day = 'sat';
+		}
+
+		// Get the location.
+		$location = get_post_meta( $post->ID, 'conf_sch_event_location', true );
+
+		// Return URL for Room 1004.
+		if ( '956' == $location ) {
+			if ( 'fri' == $event_day ) {
+				return 'https://zoom.us/j/566100647';
+			} else if ( 'sat' == $event_day ) {
+				return 'https://zoom.us/j/370277206';
+			}
+		} else if ( '954' == $location ) {
+			if ( 'fri' == $event_day ) {
+				return 'https://zoom.us/j/492704312';
+			} else if ( 'sat' == $event_day ) {
+				return 'https://zoom.us/j/844714918';
+			}
+		} else if ( '829' == $location ) {
+			if ( 'fri' == $event_day ) {
+				return 'https://zoom.us/j/199433513';
+			} else if ( 'sat' == $event_day ) {
+				return 'https://zoom.us/j/264420179';
+			}
+		}
+
+		return $livestream_url;
+	}
+
+	/**
+	 * Filter the feedback URL.
+	 *
+	 * @access  public
+	 * @param   $feedback_url - string - the default feedback URL.
+	 * @param   $post - object - the post information.
+	 * @return  string - the filtered feedback URL.
+	 */
+	public function filter_conf_sch_feedback_url( $feedback_url, $post ) {
+
+		// If a session, define the URL.
+		$event_types = wp_get_object_terms( $post->ID, 'event_types', array( 'fields' => 'slugs' ) );
+		if ( ! empty( $event_types ) && in_array( 'session', $event_types ) ) {
+			return get_bloginfo( 'url' ) . '/session-survey/' . $post->ID . '/';
+		}
+
+		return $feedback_url;
 	}
 }
 
