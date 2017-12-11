@@ -322,15 +322,10 @@ class WPCampus_Sessions_Admin {
 
 			// Get speaker's events.
 			$events = $speaker->get_events();
-			if ( $events ) {
+			if ( $events ) :
 
 				// Get speaker confirmation ID.
-				$speaker_confirmation_id = wpcampus_sessions()->get_speaker_confirmation_id( $post_id );
-
-				// If no confirmation ID, create one.
-				if ( ! $speaker_confirmation_id ) {
-					$speaker_confirmation_id = wpcampus_sessions()->create_speaker_confirmation_id( $post_id );
-				}
+				$speaker_confirmation_id = wpcampus_sessions()->get_speaker_confirmation_id( $post_id, true );
 
 				foreach ( $events as $event ) :
 
@@ -344,7 +339,7 @@ class WPCampus_Sessions_Admin {
 					?><a href="<?php echo $confirmation_url; ?>" target="_blank"><?php _e( 'Confirmation form', 'conf-schedule' ); ?></a><br /><?php
 
 				endforeach;
-			}
+			endif;
 		}
 	}
 
@@ -358,18 +353,42 @@ class WPCampus_Sessions_Admin {
 	public function print_wpc_speaker_information( $post_id ) {
 
 		// Get the information.
-		$status = get_post_meta( $post_id, 'conf_sch_speaker_status', true );
 		$technology = get_post_meta( $post_id, 'wpc_speaker_technology', true );
 		$video_release = get_post_meta( $post_id, 'wpc_speaker_video_release', true );
 		$unavailability = get_post_meta( $post_id, 'wpc_speaker_unavailability', true );
 		$arrival = get_post_meta( $post_id, 'wpc_speaker_arrival', true );
 		$special_requests = get_post_meta( $post_id, 'wpc_speaker_special_requests', true );
 
+		// Get speaker.
+		$speaker = new Conference_Schedule_Speaker( $post_id );
+
+		// Get speaker's events.
+		$events = $speaker->get_events();
+
 		?>
 		<p><strong><?php _e( 'Status:', 'wpcampus' ); ?></strong><br /><?php
 
 			// Print the speaker's status.
 			$this->print_speaker_status( $post_id );
+
+			if ( $events ) :
+
+				// Get speaker confirmation ID.
+				$speaker_confirmation_id = wpcampus_sessions()->get_speaker_confirmation_id( $post_id, true );
+
+				foreach ( $events as $event ) :
+
+					// Print confirmation URL.
+					$confirmation_url = add_query_arg( array(
+						'speaker' => $post_id,
+						'session' => $event->ID,
+						'c'       => $speaker_confirmation_id,
+					), get_bloginfo( 'url' ) . '/speaker-confirmation/' );
+
+					?><br /><a href="<?php echo $confirmation_url; ?>" target="_blank"><?php printf( __( 'Confirmation form for "%s"', 'conf-schedule' ), $event->post_title ); ?></a><br /><?php
+
+				endforeach;
+			endif;
 
 		?></p>
 		<p><strong>Technology:</strong><br /><?php echo $technology ?: '<em>This speaker did not specify which technology they\'ll use.</em>'; ?></p>

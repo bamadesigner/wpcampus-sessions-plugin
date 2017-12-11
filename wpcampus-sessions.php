@@ -123,10 +123,15 @@ class WPCampus_Sessions {
 	/**
 	 * Get a speaker's confirmation ID.
 	 */
-	public function get_speaker_confirmation_id( $speaker_id ) {
+	public function get_speaker_confirmation_id( $speaker_id, $create = false ) {
 
 		// Get speaker's confirmation id.
 		$speaker_confirmation_id = get_post_meta( $speaker_id, 'conf_sch_confirmation_id', true );
+
+		// If no confirmation ID, create one.
+		if ( ! $speaker_confirmation_id && $create ) {
+			$speaker_confirmation_id = $this->create_speaker_confirmation_id( $speaker_id );
+		}
 
 		return ! empty( $speaker_confirmation_id ) ? $speaker_confirmation_id : false;
 	}
@@ -136,7 +141,7 @@ class WPCampus_Sessions {
 	 */
 	public function create_speaker_confirmation_id( $speaker_id ) {
 		global $wpdb;
-		$new_id = $wpdb->query( "SELECT SUBSTRING(MD5(RAND()),16)" );
+		$new_id = $wpdb->get_var( "SELECT SUBSTRING(MD5(RAND()),16)" );
 		if ( ! empty( $new_id ) ) {
 			update_post_meta( $speaker_id, 'conf_sch_confirmation_id', $new_id );
 		}
@@ -166,7 +171,7 @@ class WPCampus_Sessions {
 		// Get speaker's confirmation id.
 		$speaker_confirmation_id = $this->get_speaker_confirmation_id( $speaker_id );
 
-		return $form_confirmation_id == $speaker_confirmation_id;
+		return $form_confirmation_id === $speaker_confirmation_id;
 	}
 
 	/**
