@@ -1777,6 +1777,10 @@ class WPCampus_Sessions {
 	 */
 	public function filter_conf_sch_livestream_url( $livestream_url, $post ) {
 
+		if ( '573' == $post->ID ) {
+			return '';
+		}
+
 		// Get the date.
 		$event_date = get_post_meta( $post->ID, 'conf_sch_event_date', true );
 		if ( ! $event_date || ! strtotime( $event_date ) ) {
@@ -1809,7 +1813,7 @@ class WPCampus_Sessions {
 			if ( 'fri' == $event_day ) {
 				return 'https://zoom.us/j/492704312';
 			} else if ( 'sat' == $event_day ) {
-				return 'https://zoom.us/j/844714918';
+				return 'https://zoom.us/j/153508653';
 			}
 		} else if ( '829' == $location ) {
 			if ( 'fri' == $event_day ) {
