@@ -61,7 +61,8 @@ class WPCampus_Sessions {
 		// Process 2017 speaker application.
 		add_action( 'gform_after_submission_1', array( $this, 'process_2017_speaker_application' ), 10, 2 );
 
-		// Process 2017 speaker confirmation.
+		// Process speaker confirmation.
+		add_filter( 'gform_get_form_filter_5', array( $this, 'filter_online_speaker_confirmation_form' ), 100, 2 );
 		add_filter( 'gform_get_form_filter_8', array( $this, 'filter_2017_speaker_confirmation_form' ), 100, 2 );
 		//add_action( 'gform_after_submission_8', array( $this, 'process_2017_speaker_confirmation' ), 10, 2 );
 
@@ -276,7 +277,9 @@ class WPCampus_Sessions {
 
 		// Is 2017 speaker form?
 		$is_2017_speaker_form = ( 7 == $blog_id && in_array( $field->formId, array( 8, 13 ) ) );
-		if ( $is_2017_speaker_form ) {
+		$is_online_speaker_form = ( 6 == $blog_id && in_array( $field->formId, array( 5 ) ) );
+
+		if ( $is_2017_speaker_form || $is_online_speaker_form ) {
 
 			// Get the speaker and session ID.
 			$speaker_id = $this->get_form_speaker_id();
@@ -375,10 +378,11 @@ class WPCampus_Sessions {
 
 		// Is 2017 speaker form?
 		$is_2017_speaker_form = ( 7 == $blog_id && in_array( $form['id'], array( 8, 13 ) ) );
+		$is_online_speaker_form = ( 6 == $blog_id && in_array( $form['id'], array( 5 ) ) );
 
 		// Get the speaker and session ID.
-		$speaker_id = $is_2017_speaker_form ? $this->get_form_speaker_id() : 0;
-		$session_id = $is_2017_speaker_form ? $this->get_form_session_id() : 0;
+		$speaker_id = ( $is_2017_speaker_form || $is_online_speaker_form ) ? $this->get_form_speaker_id() : 0;
+		$session_id = ( $is_2017_speaker_form || $is_online_speaker_form ) ? $this->get_form_session_id() : 0;
 
 		// Get the session's speakers.
 		$session_speakers = $this->get_form_session_speakers( $session_id );
@@ -903,6 +907,90 @@ class WPCampus_Sessions {
 				add_post_meta( $schedule_post_id, 'conf_sch_event_speaker', $speaker_id, false );
 			}
 		}
+	}
+
+	/**
+	 * Filter the output for the 2017 speaker confirmation form.
+	 *
+	 * @access  public
+	 * @param   $form_string - string - the default form HTML.
+	 * @param   $form - array - the form array
+	 * @return  string - the filtered HTML.
+	 */
+	public function filter_online_speaker_confirmation_form( $form_string, $form ) {
+		global $blog_id;
+
+		// Only on online website.
+		if ( 6 != $blog_id ) {
+			return false;
+		}
+
+		// Build error message.
+		$error_message = '<div class="panel gray">
+			<p>Oops! It looks like we\'re missing some important information to confirm your session.</p>
+			<p>Try the link from your confirmation email again and, if the form continues to fail, please <a href="/contact/">let us know</a>.</p>
+		</div>';
+
+		// Get the speaker ID
+		$speaker_id = $this->get_form_speaker_id();
+		if ( ! $speaker_id ) {
+			return $error_message;
+		}
+
+		// Check the confirmation ID.
+		$check_confirmation_id = $this->check_form_speaker_confirmation_id( $speaker_id );
+		if ( ! $check_confirmation_id ) {
+			return $error_message;
+		}
+
+		// Get the speaker post, session ID and session post.
+		$speaker_post = $this->get_form_speaker_post( $speaker_id );
+		$session_id = $this->get_form_session_id();
+		$session_post = $this->get_form_session_post( $session_id );
+		if ( ! $speaker_post || ! $session_id || ! $session_post ) {
+			return $error_message;
+		}
+
+		// Get time.
+		$event_start_time = null;
+		$event_start_time_string = get_post_meta( $session_id, 'conf_sch_event_start_time', true );
+		if ( $event_start_time_string ) {
+			$event_start_time_ts = strtotime( $event_start_time_string );
+			if ( $event_start_time_ts !== false ) {
+				$event_start_time = date( 'g:i a', $event_start_time_ts );
+			}
+		}
+
+		// Get location.
+		$event_location_id = get_post_meta( $session_id, 'conf_sch_event_location', true );
+		$event_location = ( 10 == $event_location_id ) ? 2 : 1;
+
+		// Build format string.
+		$format_key = get_post_meta( $session_id, 'conf_sch_event_format', true );
+		switch ( $format_key ) {
+
+			case 'lightning':
+				$format = 'lightning talk';
+				break;
+
+			case 'workshop':
+				$format = 'workshop';
+				break;
+
+			default:
+				$format = '45-minute session';
+				break;
+		}
+
+		// Add message.
+		$message = '<div class="panel gray">
+			<p><strong>Hello ' . $speaker_post->post_title . '!</strong> You have been selected to present on "' . $session_post->post_title . '" as a ' . $format . '.</p>
+			<p>We have scheduled your session for Tuesday, January 30, 2018 at ' . $event_start_time . ' CST in Room ' . $event_location . '.</p>
+			<p>Thank you from all of us in the WPCampus community.<br />We\'re grateful to have you present and share your knowledge and experience at WPCampus Online 2018.</p>
+			<p><strong>Please review and confirm your acceptance to present by Friday, December 8, 2017. If you need more time, simply <a href="mailto:speakers@wpcampus.org">let us know</a>.</strong></p>
+		</div>';
+
+		return $message . $form_string;
 	}
 
 	/**
